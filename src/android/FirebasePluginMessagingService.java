@@ -19,6 +19,11 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.util.Map;
 import java.util.Random;
 
+
+import android.content.Context;
+import me.leolin.shortcutbadger.ShortcutBadger;
+
+
 public class FirebasePluginMessagingService extends FirebaseMessagingService {
 
     private static final String TAG = "FirebasePlugin";
@@ -42,42 +47,33 @@ public class FirebasePluginMessagingService extends FirebaseMessagingService {
 
         // TODO(developer): Handle FCM messages here.
         // Not getting messages here? See why this may be: https://goo.gl/39bRNJ
-        String title;
-        String text;
-        String id;
-        String sound = null;
-        if (remoteMessage.getNotification() != null) {
-            title = remoteMessage.getNotification().getTitle();
-            text = remoteMessage.getNotification().getBody();
-            id = remoteMessage.getMessageId();
-        } else {
-            title = remoteMessage.getData().get("title");
-            text = remoteMessage.getData().get("text");
-            id = remoteMessage.getData().get("id");
-            sound = remoteMessage.getData().get("sound");
-
-            if(TextUtils.isEmpty(text)){
-                text = remoteMessage.getData().get("body");
+        if(remoteMessage.getData() != null) 
+        {
+            String id = remoteMessage.getData().get("id");          
+            String title = remoteMessage.getData().get("title");
+            String text = remoteMessage.getData().get("body");
+            
+            if(id == null) 
+            {
+                Random rand = new Random();
+                int  n = rand.nextInt(50) + 1;
+                id = Integer.toString(n);               
+            }
+            if(title == null) title = "";
+            if(text == null) text = "";
+        
+            if ( FirebasePlugin.inBackground() ) 
+                sendNotification(id, title, text, remoteMessage.getData(), true);
+            
+            String badge = remoteMessage.getData().get("badge");
+            if(badge != null) 
+            {
+                Context context = getApplicationContext();
+                ShortcutBadger.applyCount(context, Integer.parseInt(badge));
             }
         }
+        Log.d(TAG, "New notification message!");
 
-        if(TextUtils.isEmpty(id)){
-            Random rand = new Random();
-            int  n = rand.nextInt(50) + 1;
-            id = Integer.toString(n);
-        }
-
-        Log.d(TAG, "From: " + remoteMessage.getFrom());
-        Log.d(TAG, "Notification Message id: " + id);
-        Log.d(TAG, "Notification Message Title: " + title);
-        Log.d(TAG, "Notification Message Body/Text: " + text);
-        Log.d(TAG, "Notification Message Sound: " + sound);
-
-        // TODO: Add option to developer to configure if show notification when app on foreground
-        if (!TextUtils.isEmpty(text) || !TextUtils.isEmpty(title) || (!remoteMessage.getData().isEmpty())) {
-            boolean showNotification = (FirebasePlugin.inBackground() || !FirebasePlugin.hasNotificationsCallback()) && (!TextUtils.isEmpty(text) || !TextUtils.isEmpty(title));
-            sendNotification(id, title, text, remoteMessage.getData(), showNotification, sound);
-        }
 
     }
 
